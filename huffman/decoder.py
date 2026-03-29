@@ -1,18 +1,18 @@
 class HuffmanDecoder:
-    def decode(self, encoded_data, root):
+    def decode(self, encoded_data, codes):
+        # Step 1: Reverse the codes
+        reverse_codes = {v: k for k, v in codes.items()}
+
         decoded_output = []
-        current = root
+        current_code = ""
 
+        # Step 2: Read bit by bit
         for bit in encoded_data:
-            # Traverse tree
-            if bit == '0':
-                current = current.left
-            else:
-                current = current.right
+            current_code += bit
 
-            # If leaf node → append character
-            if current.left is None and current.right is None:
-                decoded_output.append(current.char)
-                current = root  # reset for next character
+            # If code matches
+            if current_code in reverse_codes:
+                decoded_output.append(reverse_codes[current_code])
+                current_code = ""
 
         return ''.join(decoded_output)
