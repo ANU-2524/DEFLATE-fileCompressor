@@ -36,10 +36,10 @@ def draw_huffman_tree(root):
 # ------------------ Streamlit UI ------------------ #
 st.set_page_config(page_title="DEFLATE Visualizer", layout="wide")
 
-st.title("🚀 DEFLATE Compression Visualizer")
+st.title("DEFLATE Compression Visualizer")
 st.write("LZ77 + Huffman Coding (Real Compression Pipeline)")
 
-file = st.file_uploader("📂 Upload a text file", type=["txt"])
+file = st.file_uploader("Upload a text file", type=["txt"])
 
 if file:
     data = file.read().decode()
@@ -51,15 +51,15 @@ if file:
     col1, col2 = st.columns(2)
 
     with col1:
-        st.subheader("📄 Original Data")
+        st.subheader("Original Data")
         st.text_area("Input Text", data, height=200)
 
     with col2:
-        st.subheader("📦 Encoded Bitstream (Preview)")
+        st.subheader("Encoded Bitstream (Preview)")
         st.text_area("Binary Output", encoded[:500] + "...", height=200)
 
     # ------------------ LZ77 Tokens ------------------ #
-    st.subheader("🔵 LZ77 Tokens")
+    st.subheader("LZ77 Tokens")
 
     formatted_tokens = []
     for t in tokens:
@@ -71,7 +71,7 @@ if file:
     st.write(formatted_tokens)
 
     # ------------------ Compression Stats ------------------ #
-    st.subheader("📊 Compression Stats")
+    st.subheader("Compression Stats")
 
     original_size = len(data) * 8  # bits
     compressed_size = len(encoded)
@@ -83,13 +83,13 @@ if file:
     st.write(f"Compression Ratio: {ratio:.2f}%")
 
     # ------------------ Huffman Tree ------------------ #
-    st.subheader("🌳 Huffman Tree Visualization")
+    st.subheader("Huffman Tree Visualization")
 
     fig = draw_huffman_tree(root)
     st.pyplot(fig)
 
     # ------------------ Extra Insight ------------------ #
-    st.subheader("🧠 Insights")
+    st.subheader("Insights")
 
     st.write(f"Total Tokens Generated: {len(tokens)}")
     st.write(f"Unique Symbols After LZ77: {len(set(formatted_tokens))}")
