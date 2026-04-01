@@ -1,52 +1,40 @@
-from utils.file_handler import FileHandler
-from compressor import Compressor
-from decompressor import Decompressor
-from visualization.visualizer import Visualizer
-import json
-import os
+"""
+DEFLATE File Compressor - Unified Entry Point
 
+This application runs the Streamlit UI which combines:
+- Single file compression
+- Batch file compression
+- Compression history
+- Analytics dashboard
+- Advanced settings
+"""
 
-OUTPUT_DIR = "output"
+import subprocess
+import sys
 
+def main():
+    """Run the Streamlit application"""
+    print("=" * 60)
+    print("DEFLATE File Compressor - Unified Application")
+    print("=" * 60)
+    print("\nStarting Streamlit app...")
+    print("A browser window will open automatically.\n")
+    
+    try:
+        subprocess.run(
+            [sys.executable, "-m", "streamlit", "run", "app.py"],
+            check=True
+        )
+    except KeyboardInterrupt:
+        print("\n\nApplication stopped by user.")
+        sys.exit(0)
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(1)
 
-def ensure_output_dir():
-    if not os.path.exists(OUTPUT_DIR):
-        os.makedirs(OUTPUT_DIR)
+if __name__ == "__main__":
+    main()
 
-
-def compress_file():
-    print("Current Working Directory:", os.getcwd())
-    path = input("Enter input file path: ").strip()
-
-    if not os.path.exists(path):
-        print("❌ File not found! Please check path.")
-        return
-    data = FileHandler.read_file(path)
-
-    compressor = Compressor()
-    encoded, root, tokens, codes = compressor.compress(data)
-
-    ensure_output_dir()
-
-    # Save compressed data
-    FileHandler.write_file(f"{OUTPUT_DIR}/compressed.bin", encoded)
-
-    # Save metadata (IMPORTANT 🔥)
-    metadata = {
-        "codes": codes,
-        "tokens": tokens
-    }
-
-    with open(f"{OUTPUT_DIR}/metadata.json", "w") as f:
-        json.dump(metadata, f)
-
-    print("\n✅ Compression Done Successfully!")
-    print(f"Compressed file saved at: {OUTPUT_DIR}/compressed.bin")
-    print(f"Metadata saved at: {OUTPUT_DIR}/metadata.json")
-
-    # Visualization
-    print("\n🌳 Showing Huffman Tree...")
-    Visualizer.draw_huffman_tree(root)
 
 
 def decompress_file():
