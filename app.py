@@ -18,12 +18,6 @@ st.set_page_config(
 )
 
 # ==================== SESSION STATE INITIALIZATION ==================== #
-if 'theme' not in st.session_state:
-    st.session_state.theme = 'light'
-
-if 'mode' not in st.session_state:
-    st.session_state.mode = 'Compress'
-
 if 'uploaded_file' not in st.session_state:
     st.session_state.uploaded_file = None
 
@@ -31,54 +25,43 @@ if 'compressed_data' not in st.session_state:
     st.session_state.compressed_data = None
 
 # ==================== CUSTOM STYLING ==================== #
-if st.session_state.theme == 'dark':
-    bg_color = "#0e1117"
-    text_color = "#ffffff"
-    card_color = "#161b22"
-else:
-    bg_color = "#ffffff"
-    text_color = "#1f1f1f"
-    card_color = "#f0f2f6"
-
-st.markdown(f"""
+st.markdown("""
     <style>
-    .main-header {{
+    .main-header {
         font-size: 2.5rem;
         font-weight: bold;
         color: #1f77b4;
         text-align: center;
         margin-bottom: 1rem;
-    }}
-    .subheader {{
+    }
+    .subheader {
         font-size: 1.8rem;
         font-weight: bold;
         color: #2e5090;
         margin: 1.5rem 0 1rem 0;
-    }}
-    .metric-card {{
-        background-color: {card_color};
+    }
+    .metric-card {
         padding: 1.5rem;
         border-radius: 0.8rem;
         margin: 0.5rem 0;
         border-left: 4px solid #1f77b4;
-    }}
-    .stat-title {{
+    }
+    .stat-title {
         font-size: 0.85rem;
         font-weight: 600;
         opacity: 0.7;
-    }}
-    .stat-value {{
+    }
+    .stat-value {
         font-size: 1.8rem;
         font-weight: bold;
         color: #1f77b4;
-    }}
-    .history-item {{
-        background-color: {card_color};
+    }
+    .history-item {
         padding: 1rem;
         border-radius: 0.5rem;
         margin: 0.5rem 0;
         border-left: 3px solid #17a2b8;
-    }}
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -194,16 +177,6 @@ def export_report(history_data):
 
 # ==================== SIDEBAR ==================== #
 st.sidebar.title("DEFLATE Compressor Pro")
-st.sidebar.divider()
-
-# Theme toggle
-col_theme1, col_theme2 = st.sidebar.columns(2)
-with col_theme1:
-    if st.button("🌙 Dark" if st.session_state.theme == 'light' else "☀️ Light"):
-        st.session_state.theme = 'dark' if st.session_state.theme == 'light' else 'light'
-        st.rerun()
-
-st.sidebar.write(f"Theme: {st.session_state.theme.upper()}")
 st.sidebar.divider()
 
 # Mode selection
@@ -781,14 +754,15 @@ elif mode == "Settings":
     col1, col2 = st.columns(2)
     
     with col1:
-        st.write("### Theme")
-        if st.button(f"Current: {st.session_state.theme.upper()}"):
+        st.write("### 🌙 Theme")
+        if st.button(f"Switch to {'Dark' if st.session_state.theme == 'light' else 'Light'} Mode", key="theme_toggle_settings", use_container_width=True):
             st.session_state.theme = 'dark' if st.session_state.theme == 'light' else 'light'
             st.rerun()
+        st.write(f"Current: **{st.session_state.theme.upper()}**")
     
     with col2:
-        st.write("### Files & Storage")
-        if st.button("🗑️ Clear History"):
+        st.write("### 📁 Files & Storage")
+        if st.button("🗑️ Clear History", key="clear_history_btn", use_container_width=True):
             if os.path.exists(HISTORY_FILE):
                 os.remove(HISTORY_FILE)
             st.success("History cleared!")
