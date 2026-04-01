@@ -58,11 +58,6 @@ class SimpleTokenFormat:
         for byte in data:
             bits += format(byte, '08b')
         
-        print(f"[DEBUG] decode_tokens: input data length={len(data)}")
-        print(f"[DEBUG] First 10 bytes: {list(data[:10])}")
-        print(f"[DEBUG] Binary bits length: {len(bits)}")
-        print(f"[DEBUG] First 32 bits (first 4 bytes): {bits[:32] if len(bits) >= 32 else bits}")
-        
         tokens = []
         pos = 0
         
@@ -94,13 +89,6 @@ class SimpleTokenFormat:
             
             else:
                 # Unknown marker - might be padding, stop
-                print(f"[DEBUG] Unknown marker at pos {pos}: {marker}")
                 break
-        
-        print(f"[DEBUG] Decoded {len(tokens)} tokens from {len(data)} bytes")
-        if not tokens:
-            print(f"[WARNING] No tokens decoded!")
-            print(f"[WARNING] Data bytes: {list(data)}")
-            print(f"[WARNING] After converting to binary, first marker: {bits[:8] if len(bits) >= 8 else 'too short'}")
         
         return tokens

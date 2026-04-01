@@ -133,5 +133,14 @@
     "compression_ratio": 50.21015420586762,
     "space_saved": 541155,
     "time_taken": 6.036777973175049
+  },
+  {
+    "filename": "netflix1.csv",
+    "timestamp": "2026-04-01T23:59:46.039258",
+    "original_size": 1077780,
+    "compressed_size": 688718,
+    "compression_ratio": 36.09846165265639,
+    "space_saved": 389062,
+    "time_taken": 7.72105860710144
   }
 ]

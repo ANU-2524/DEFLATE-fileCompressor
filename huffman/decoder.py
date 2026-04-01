@@ -65,20 +65,11 @@ class HuffmanDecoder:
         if not encoded_data or not codes:
             return b""
         
-        print(f"[DEBUG] Huffman decoder (to bytes) starting. Codes count: {len(codes)}")
-        
-        # Validate codes - keys should be integers (byte values)
-        for byte_val, code in list(codes.items())[:3]:
-            print(f"[DEBUG] Sample code: byte_value={byte_val} (type={type(byte_val).__name__}) -> {code}")
-        
         # Convert bytes back to binary string
         binary_string = self._unpack_binary(encoded_data)
-        print(f"[DEBUG] Binary string length: {len(binary_string)}")
         
         # Reverse the codes - creates mapping from binary code to byte value
         reverse_codes = {v: k for k, v in codes.items()}
-        
-        print(f"[DEBUG] Reverse codes count: {len(reverse_codes)}")
 
         decoded_bytes = []
         current_code = ""
@@ -95,19 +86,15 @@ class HuffmanDecoder:
             # Safety check: if code is getting too long, something is wrong
             elif len(current_code) > 32:
                 # Too long - must be an error or corrupted data
-                print(f"[ERROR] Code too long: {current_code}")
-                print(f"[ERROR] Available codes: {list(reverse_codes.keys())[:10]}")
-                raise ValueError(f"Huffman decoding error: code too long '{current_code[:50]}'")
+                raise ValueError(f"Huffman decoding error: code too long")
 
         # Any remaining bits should be padding (all zeros)
         if current_code:
-            # Check if remaining bits are all zeros (valid padding)
-            if current_code != "0" * len(current_code):
-                print(f"[WARNING] Non-zero padding bits: {current_code} (treating as padding)")
+            # Remaining bits are padding, ignore
+            pass
 
         # Convert byte values directly to bytes
         result = bytes(decoded_bytes)
-        print(f"[DEBUG] Huffman decode to bytes complete. Output length: {len(result)}")
         return result
     
     def _unpack_binary(self, data):
@@ -120,19 +107,14 @@ class HuffmanDecoder:
         
         # First byte contains padding info
         padding = data[0]
-        print(f"[DEBUG] Padding info: {padding}")
         
         # Convert remaining bytes to binary string
         binary_string = ""
         for byte in data[1:]:
             binary_string += format(byte, '08b')
         
-        print(f"[DEBUG] Binary string before removing padding: {len(binary_string)}")
-        
         # Remove padding bits
         if padding > 0:
             binary_string = binary_string[:-padding]
-        
-        print(f"[DEBUG] Binary string after removing padding: {len(binary_string)}")
         
         return binary_string

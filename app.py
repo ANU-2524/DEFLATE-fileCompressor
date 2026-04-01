@@ -562,11 +562,8 @@ elif mode == "Decompress":
                 st.error("❌ Metadata does not contain valid Huffman codes!")
                 st.stop()
             
-            print(f"[DEBUG] Codes from JSON: type={type(codes_from_json)}, length={len(codes_from_json)}")
-            print(f"[DEBUG] Sample codes_from_json: {codes_from_json[:10] if isinstance(codes_from_json, list) else codes_from_json}")
-            
             # Decode codes array: convert index to byte value
-            # If it's already a dict ( from older format), use it directly
+            # If it's already a dict (from older format), use it directly
             if isinstance(codes_from_json, dict):
                 codes_converted = {int(k): v for k, v in codes_from_json.items()}
             else:
@@ -578,13 +575,7 @@ elif mode == "Decompress":
                             codes_converted[byte_val] = binary_code
                 except Exception as e:
                     st.error(f"❌ Error decoding Huffman codes: {str(e)}")
-                    print(f"[ERROR] Failed to decode codes: {str(e)}")
-                    import traceback
-                    print(traceback.format_exc())
                     st.stop()
-            
-            print(f"[DEBUG] Codes converted: {len(codes_converted)} codes")
-            print(f"[DEBUG] Sample converted codes: {list(codes_converted.items())[:5]}")
             
             if not codes_converted:
                 st.error("❌ No valid Huffman codes found after conversion!")
@@ -612,9 +603,6 @@ elif mode == "Decompress":
                 st.success(f"✅ Decompression Complete! ({decompression_time:.3f}s)")
             except Exception as decompression_error:
                 st.error(f"❌ Decompression failed: {str(decompression_error)}")
-                print(f"[ERROR] Decompression error: {str(decompression_error)}")
-                import traceback
-                print(traceback.format_exc())
                 st.stop()
             
             st.divider()

@@ -25,32 +25,20 @@ class Decompressor:
             return ""
         
         try:
-            print(f"[DEBUG] Starting decompression. Data size: {len(encoded_data)}, Codes: {len(codes)}")
-            print(f"[DEBUG] Codes type: {type(codes)}, Sample codes: {list(codes.items())[:5] if codes else 'empty'}")
-            
             # Step 1: Huffman Decode (codes dict has integer keys)
-            print(f"[DEBUG] Step 1: Huffman decoding...")
             decoded_bytes = self.huffman.decode_to_bytes(encoded_data, codes)
-            print(f"[DEBUG] Huffman decoded bytes length: {len(decoded_bytes)}")
-            print(f"[DEBUG] First 20 decoded bytes: {decoded_bytes[:20] if decoded_bytes else 'empty'}")
             
             if not decoded_bytes:
                 raise ValueError("Huffman decoding produced empty result")
             
             # Step 2: Decode token bytes back to tokens using TokenEncoder
-            print(f"[DEBUG] Step 2: Decoding tokens...")
-            print(f"[DEBUG] Input to decode_tokens: {len(decoded_bytes)} bytes")
             tokens = self.token_encoder.decode_tokens(decoded_bytes)
-            print(f"[DEBUG] Tokens decoded: {len(tokens)} tokens")
-            print(f"[DEBUG] Sample tokens: {tokens[:5] if tokens else 'no tokens'}")
             
             if not tokens:
                 raise ValueError("Token decoding produced no tokens")
             
             # Step 3: LZ77 Decode
-            print(f"[DEBUG] Step 3: LZ77 decompression...")
             original_data = self.lz77.decompress(tokens)
-            print(f"[DEBUG] Decompression complete. Output size: {len(original_data)}")
             
             return original_data
         except IndexError as e:
