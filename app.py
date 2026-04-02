@@ -24,6 +24,9 @@ if 'uploaded_file' not in st.session_state:
 if 'compressed_data' not in st.session_state:
     st.session_state.compressed_data = None
 
+if 'theme' not in st.session_state:
+    st.session_state.theme = 'light'
+
 # ==================== CUSTOM STYLING ==================== #
 st.markdown("""
     <style>
@@ -751,22 +754,12 @@ elif mode == "History":
 elif mode == "Settings":
     st.markdown("<div class='main-header'>Settings</div>", unsafe_allow_html=True)
     
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.write("### 🌙 Theme")
-        if st.button(f"Switch to {'Dark' if st.session_state.theme == 'light' else 'Light'} Mode", key="theme_toggle_settings", use_container_width=True):
-            st.session_state.theme = 'dark' if st.session_state.theme == 'light' else 'light'
-            st.rerun()
-        st.write(f"Current: **{st.session_state.theme.upper()}**")
-    
-    with col2:
-        st.write("### 📁 Files & Storage")
-        if st.button("🗑️ Clear History", key="clear_history_btn", use_container_width=True):
-            if os.path.exists(HISTORY_FILE):
-                os.remove(HISTORY_FILE)
-            st.success("History cleared!")
-            st.rerun()
+    st.write("### 📁 Files & Storage")
+    if st.button("🗑️ Clear History", key="clear_history_btn", use_container_width=True):
+        if os.path.exists(HISTORY_FILE):
+            os.remove(HISTORY_FILE)
+        st.success("History cleared!")
+        st.rerun()
     
     st.divider()
     
