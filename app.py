@@ -9,61 +9,165 @@ from datetime import datetime
 import pandas as pd
 import time
 from pathlib import Path
+import numpy as np
 
 # ==================== PAGE CONFIG ==================== #
 st.set_page_config(
     page_title="DEFLATE Compressor Pro",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
+    menu_items={
+        'Get Help': 'https://github.com/deflate-compressor',
+        'Report a bug': 'https://github.com/deflate-compressor/issues'
+    }
 )
 
 # ==================== SESSION STATE INITIALIZATION ==================== #
 if 'uploaded_file' not in st.session_state:
     st.session_state.uploaded_file = None
-
 if 'compressed_data' not in st.session_state:
     st.session_state.compressed_data = None
-
 if 'theme' not in st.session_state:
-    st.session_state.theme = 'light'
+    st.session_state.theme = 'dark'
+if 'animation_state' not in st.session_state:
+    st.session_state.animation_state = 0
 
-# ==================== CUSTOM STYLING ==================== #
+# ==================== MODERN MINIMAL STYLING ==================== #
 st.markdown("""
     <style>
+    * {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+    }
+    
+    /* Main header - clean and simple */
     .main-header {
-        font-size: 2.5rem;
-        font-weight: bold;
-        color: #1f77b4;
+        font-size: 2.8rem;
+        font-weight: 700;
+        color: #1a1a1a;
         text-align: center;
-        margin-bottom: 1rem;
+        margin: 1.5rem 0 2rem 0;
+        letter-spacing: -0.5px;
     }
-    .subheader {
-        font-size: 1.8rem;
-        font-weight: bold;
-        color: #2e5090;
-        margin: 1.5rem 0 1rem 0;
-    }
+    
+    /* Subtle card design */
     .metric-card {
-        padding: 1.5rem;
-        border-radius: 0.8rem;
+        background: #ffffff;
+        padding: 1.2rem;
+        border-radius: 0.6rem;
         margin: 0.5rem 0;
-        border-left: 4px solid #1f77b4;
+        border: 1px solid #eaeaea;
+        border-left: 3px solid #2563eb;
+        transition: box-shadow 0.2s ease;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
+    
+    .metric-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+    
     .stat-title {
-        font-size: 0.85rem;
+        font-size: 0.75rem;
         font-weight: 600;
-        opacity: 0.7;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        margin-bottom: 0.5rem;
     }
+    
     .stat-value {
         font-size: 1.8rem;
-        font-weight: bold;
-        color: #1f77b4;
+        font-weight: 700;
+        color: #1a1a1a;
     }
-    .history-item {
-        padding: 1rem;
+    
+    .stat-change {
+        font-size: 0.85rem;
+        color: #10b981;
+        margin-top: 0.4rem;
+        font-weight: 500;
+    }
+    
+    /* Feature card */
+    .feature-card {
+        background: #ffffff;
+        padding: 1.5rem;
+        border-radius: 0.6rem;
+        border: 1px solid #eaeaea;
+        text-align: center;
+        transition: box-shadow 0.2s ease;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+    
+    .feature-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+    
+    /* Divider */
+    hr {
+        border: none;
+        height: 1px;
+        background: #f0f0f0;
+        margin: 1.5rem 0;
+    }
+    
+    /* Streamlit components */
+    .stButton > button {
+        background-color: #2563eb;
+        color: white;
+        border: none;
         border-radius: 0.5rem;
-        margin: 0.5rem 0;
-        border-left: 3px solid #17a2b8;
+        font-weight: 600;
+        transition: background-color 0.2s ease;
+        padding: 0.6rem 1.2rem;
+    }
+    
+    .stButton > button:hover {
+        background-color: #1d4ed8;
+    }
+    
+    .stTabs [data-baseweb="tab-list"] {
+        border-bottom: 2px solid #eaeaea;
+        background-color: transparent;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        border-bottom: 2px solid transparent;
+        color: #6b7280;
+        font-weight: 500;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        border-bottom-color: #2563eb;
+        color: #1a1a1a;
+    }
+    
+    .stFileUploader {
+        border: 2px dashed #d1d5db;
+        border-radius: 0.6rem;
+        background-color: #fafafa;
+    }
+    
+    .stFileUploader:hover {
+        border-color: #2563eb;
+        background-color: #f0f6ff;
+    }
+    
+    .stAlert {
+        border-radius: 0.6rem;
+        background-color: #f9fafb;
+        border: 1px solid #e5e7eb;
+    }
+    
+    .stSidebar {
+        background-color: #f9fafb;
+        border-right: 1px solid #eaeaea;
+    }
+    
+    /* Table */
+    .stDataframe {
+        border: 1px solid #eaeaea;
+        border-radius: 0.6rem;
+        overflow: hidden;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -72,7 +176,7 @@ st.markdown("""
 HISTORY_FILE = "compression_history.json"
 OUTPUT_DIR = "output"
 
-# ==================== HELPER FUNCTIONS ==================== #
+# ==================== ENHANCED HELPER FUNCTIONS ==================== #
 def format_bytes(bytes_val):
     """Convert bytes to human readable format"""
     for unit in ['B', 'KB', 'MB', 'GB']:
@@ -95,12 +199,76 @@ def save_history(entry):
     """Save compression entry to history"""
     history = load_history()
     history.append(entry)
-    
-    # Keep only last 50 entries
     history = history[-50:]
     
     with open(HISTORY_FILE, 'w') as f:
         json.dump(history, f, indent=2)
+
+def display_metric_card(col, title, value, unit=""):
+    """Display a clean metric card"""
+    with col:
+        st.markdown(f"""
+        <div class='metric-card'>
+            <div class='stat-title'>{title}</div>
+            <div class='stat-value'>{value}</div>
+            {f'<div style="color: #9ca3af; font-size: 0.85rem; margin-top: 0.4rem;">{unit}</div>' if unit else ''}
+        </div>
+        """, unsafe_allow_html=True)
+
+def display_feature_card(col, icon, title, description):
+    """Display a clean feature card"""
+    with col:
+        st.markdown(f"""
+        <div class='feature-card'>
+            <div style='font-size: 2rem; margin-bottom: 0.5rem; line-height: 1;'>{icon}</div>
+            <div style='font-size: 1.05rem; font-weight: 600; color: #1a1a1a; margin-bottom: 0.5rem;'>{title}</div>
+            <div style='color: #6b7280; font-size: 0.9rem; line-height: 1.4;'>{description}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+def create_stat_comparison(original, compressed):
+    """Create a clean comparison visualization"""
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+    
+    # Style
+    fig.patch.set_facecolor('white')
+    ax1.set_facecolor('white')
+    ax2.set_facecolor('white')
+    
+    # Size comparison
+    categories = ['Original', 'Compressed']
+    values = [original, compressed]
+    colors = ['#3b82f6', '#10b981']
+    
+    bars1 = ax1.bar(categories, values, color=colors, alpha=0.8, edgecolor='#e5e7eb', linewidth=1.5)
+    ax1.set_ylabel('Size (Bytes)', color='#374151', fontsize=11, fontweight='600')
+    ax1.set_title('File Size Comparison', color='#1a1a1a', fontsize=12, fontweight='600', pad=15)
+    ax1.tick_params(colors='#6b7280')
+    ax1.grid(axis='y', alpha=0.1, color='#d1d5db', linestyle='-', linewidth=0.5)
+    ax1.spines['top'].set_visible(False)
+    ax1.spines['right'].set_visible(False)
+    
+    # Add value labels
+    for bar, val in zip(bars1, values):
+        height = bar.get_height()
+        ax1.text(bar.get_x() + bar.get_width()/2., height,
+                f'{format_bytes(val)}',
+                ha='center', va='bottom', color='#1a1a1a', fontweight='600', fontsize=10)
+    
+    # Ratio pie chart
+    if original > 0:
+        ratio = min(100, (compressed / original) * 100)
+        sizes = [ratio, 100 - ratio]
+        labels = [f'Compressed\n{ratio:.1f}%', f'Reduction\n{100-ratio:.1f}%']
+        colors_pie = ['#ef4444', '#10b981']
+        
+        wedges, texts, autotexts = ax2.pie(sizes, labels=labels, colors=colors_pie, autopct='%1.1f%%',
+                textprops={'color': '#1a1a1a', 'fontweight': '600', 'fontsize': 10},
+                startangle=90, wedgeprops={'edgecolor': '#e5e7eb', 'linewidth': 1.5})
+        ax2.set_title('Compression Breakdown', color='#1a1a1a', fontsize=12, fontweight='600', pad=15)
+    
+    plt.tight_layout()
+    return fig
 
 def hierarchy_pos(G, root, width=1., vert_gap=0.2, vert_loc=0, xcenter=0.5):
     """Hierarchical layout for trees"""
@@ -117,15 +285,13 @@ def hierarchy_pos(G, root, width=1., vert_gap=0.2, vert_loc=0, xcenter=0.5):
     return pos
 
 def draw_huffman_tree_enhanced(root):
-    """Draw Huffman tree with graphviz layout"""
+    """Draw Huffman tree with clean styling"""
     G = nx.DiGraph()
 
     def add_edges(node, parent=None):
         if node:
-            # Handle both char attribute and integer keys
             if hasattr(node, 'char'):
                 if node.char is not None:
-                    # If it's an integer (byte value), show as chr representation
                     if isinstance(node.char, int):
                         label = f"chr({node.char})"
                     else:
@@ -146,7 +312,6 @@ def draw_huffman_tree_enhanced(root):
 
     add_edges(root)
 
-    # Try graphviz layout first
     try:
         pos = nx.nx_agraph.graphviz_layout(G, prog='dot')
     except:
@@ -155,14 +320,21 @@ def draw_huffman_tree_enhanced(root):
     labels = nx.get_node_attributes(G, 'label')
     edge_labels = nx.get_edge_attributes(G, 'label')
 
-    fig, ax = plt.subplots(figsize=(14, 8))
-    nx.draw(G, pos, labels=labels, with_labels=True, ax=ax,
-            node_color='lightblue', node_size=1200,
-            font_size=9, font_weight='bold',
-            arrows=True, arrowsize=15, edge_color='gray', width=2)
-    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, ax=ax, font_size=8)
+    fig, ax = plt.subplots(figsize=(16, 10))
+    fig.patch.set_facecolor('white')
+    ax.set_facecolor('white')
     
-    ax.set_title("Huffman Tree (Hierarchical Visualization)", fontsize=14, fontweight='bold')
+    nx.draw(G, pos, labels=labels, with_labels=True, ax=ax,
+            node_color='#dbeafe', node_size=1500,
+            font_size=9, font_weight='600', font_color='#1a1a1a',
+            arrows=True, arrowsize=15, edge_color='#d1d5db', width=1.5,
+            arrowstyle='->', connectionstyle='arc3,rad=0.1')
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, ax=ax, 
+                                  font_size=9, font_color='#6b7280', font_weight='600')
+    
+    ax.set_title("Huffman Binary Tree", fontsize=14, fontweight='600', 
+                 color='#1a1a1a', pad=20)
+    ax.axis('off')
     plt.tight_layout()
     return fig
 
@@ -170,56 +342,85 @@ def ensure_output_dir():
     """Ensure output directory exists"""
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-def export_report(history_data):
-    """Create a report from compression history"""
-    if not history_data:
-        return None
-    
-    df = pd.DataFrame(history_data)
-    return df
-
 # ==================== SIDEBAR ==================== #
-st.sidebar.title("DEFLATE Compressor Pro")
-st.sidebar.divider()
-
-# Mode selection
-mode = st.sidebar.radio(
-    "Select Mode:",
-    ["Compress", "Batch Compress", "Decompress", "Analytics", "History", "Settings"],
-    key="mode_selector",
-    help="Choose compression mode"
-)
-
-st.sidebar.divider()
-st.sidebar.write("### Quick Stats")
-history = load_history()
-if history:
-    st.sidebar.metric("Total Compressions", len(history))
-    total_saved = sum(h.get('space_saved', 0) for h in history)
-    st.sidebar.metric("Total Space Saved", format_bytes(total_saved))
+with st.sidebar:
+    st.markdown("""
+    <div style='text-align: center; margin-bottom: 1.5rem; padding: 1.5rem 0; border-bottom: 1px solid #eaeaea;'>
+        <div style='font-size: 1.4rem; font-weight: 700; color: #1a1a1a;'>DEFLATE</div>
+        <div style='font-size: 0.8rem; color: #6b7280; margin-top: 0.3rem; font-weight: 500;'>File Compressor</div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.divider()
+    
+    # Mode selection
+    mode = st.radio(
+        "Mode",
+        ["Compress", "Batch Compress", "Decompress", "Analytics", "History", "Settings"],
+        key="mode_selector",
+        help="Select compression mode"
+    )
+    
+    st.divider()
+    
+    # Quick stats
+    st.write("### Stats")
+    history = load_history()
+    if history:
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Compressions", len(history))
+        with col2:
+            total_saved = sum(h.get('space_saved', 0) for h in history)
+            st.metric("Saved", format_bytes(total_saved))
+        
+        avg_ratio = np.mean([h.get('compression_ratio', 0) for h in history])
+        st.metric("Avg Ratio", f"{avg_ratio:.1f}%")
+    else:
+        st.info("No history yet")
+    
+    st.divider()
+    st.markdown("""
+    <div style='text-align: center; font-size: 0.8rem; color: #9ca3af; margin-top: 1.5rem;'>
+        <div style='margin-bottom: 0.5rem;'>LZ77 + Huffman Encoding</div>
+        <div>Lossless compression</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ==================== COMPRESS MODE ==================== #
-if mode == "Compress":
-    st.markdown("<div class='main-header'>File Compression Engine</div>", unsafe_allow_html=True)
+if "Compress" in mode:
+    st.markdown("<div class='main-header'>🗜️ File Compression Engine</div>", unsafe_allow_html=True)
     
-    col1, col2 = st.columns([2, 1])
+    # Welcome section
+    col1, col2, col3 = st.columns(3)
+    display_feature_card(col1, "⚡", "LZ77", "Dictionary\nEncoding")
+    display_feature_card(col2, "🌳", "Huffman", "Statistical\nEncoding")
+    display_feature_card(col3, "🔒", "Lossless", "100% Data\nIntegrity")
+    
+    st.divider()
+    
+    # Upload section
+    st.write("### 📤 Upload File")
+    col1, col2 = st.columns([3, 1])
     
     with col1:
         uploaded_file = st.file_uploader(
-            "Upload a text file to compress",
-            type=["txt", "json", "py", "csv", "md", "xml"],
-            help="Supported formats: .txt, .json, .py, .csv, .md, .xml"
+            "Select a file to compress",
+            type=["txt", "json", "py", "csv", "md", "xml", "log"],
+            help="Supported: .txt, .json, .py, .csv, .md, .xml, .log"
         )
     
     with col2:
-        st.write("")
-        show_advanced = st.checkbox("Advanced Settings", value=False)
+        show_advanced = st.checkbox("⚙️ Advanced", value=False)
     
     # Advanced settings
     if show_advanced:
-        st.write("### Advanced Options")
-        lz77_window = st.slider("LZ77 Window Size", 1024, 32768, 32768, step=1024)
-        min_match = st.slider("Min Match Length", 3, 10, 3)
+        st.markdown("### 🔧 Advanced Options")
+        col1, col2 = st.columns(2)
+        with col1:
+            lz77_window = st.slider("LZ77 Window", 1024, 32768, 32768, step=1024)
+        with col2:
+            min_match = st.slider("Min Match Length", 3, 10, 3)
     
     if uploaded_file:
         file_content = uploaded_file.read().decode('utf-8', errors='ignore')
@@ -227,26 +428,31 @@ if mode == "Compress":
         
         st.divider()
         
-        # Display file info
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("File Size", format_bytes(file_size), "Original")
-        with col2:
-            st.metric("File Name", uploaded_file.name)
-        with col3:
-            st.metric("Characters", f"{len(file_content):,}")
+        # File info cards
+        st.write("### 📊 File Information")
+        col1, col2, col3, col4 = st.columns(4)
+        display_metric_card(col1, "FILE SIZE", format_bytes(file_size), "Original")
+        display_metric_card(col2, "FILE NAME", uploaded_file.name[:20])
+        display_metric_card(col3, "CHARACTERS", f"{len(file_content):,}")
+        display_metric_card(col4, "LINES", f"{file_content.count(chr(10)):,}")
         
-        # Compress button
-        if st.button("▶ Start Compression", use_container_width=True, type="primary", key="compress_btn"):
-            with st.spinner("Compressing..."):
+        # Compress action
+        col1, col2, col3 = st.columns([1, 1, 2])
+        with col1:
+            if st.button("▶ Start Compression", use_container_width=True, type="primary"):
+                st.session_state['compress_clicked'] = True
+        
+        if st.session_state.get('compress_clicked', False):
+            with st.spinner("🔄 Compressing your file..."):
+                progress_container = st.container()
+                
                 start_time = time.time()
                 compressor = Compressor()
                 encoded, root, tokens, codes = compressor.compress(file_content)
                 compression_time = time.time() - start_time
                 
-                # encoded is now bytes (properly packed binary)
-                compressed_size = len(encoded)  # size in bytes
-                original_size = file_size  # size in bytes
+                compressed_size = len(encoded)
+                original_size = file_size
                 compression_ratio = (1 - compressed_size / original_size) * 100 if original_size > 0 else 0
                 space_saved = original_size - compressed_size
                 
@@ -275,6 +481,7 @@ if mode == "Compress":
                 }
                 save_history(history_entry)
                 
+                st.session_state['compress_clicked'] = False
                 st.success("✅ Compression Complete!")
         
         st.divider()
@@ -285,45 +492,39 @@ if mode == "Compress":
             root = st.session_state['root']
             tokens = st.session_state['tokens']
             
-            compressed_size = st.session_state.get('compressed_size', len(encoded))  # in bytes
+            compressed_size = st.session_state.get('compressed_size', len(encoded))
             compression_ratio = st.session_state.get('compression_ratio', 0)
             space_saved = st.session_state.get('space_saved', 0)
             compression_time = st.session_state.get('compression_time', 0)
             
             # ========== COMPRESSION STATISTICS ========== #
-            st.subheader("Compression Results")
+            st.markdown("### 📈 Compression Results")
             
-            metric_col1, metric_col2, metric_col3, metric_col4, metric_col5 = st.columns(5)
-            
-            with metric_col1:
-                st.metric("Original", format_bytes(file_size))
-            with metric_col2:
-                st.metric("Compressed", format_bytes(compressed_size))
-            with metric_col3:
-                st.metric("Ratio", f"{compression_ratio:.2f}%")
-            with metric_col4:
-                st.metric("Saved", format_bytes(space_saved))
-            with metric_col5:
-                st.metric("Time", f"{compression_time:.3f}s")
+            col1, col2, col3, col4, col5 = st.columns(5)
+            display_metric_card(col1, "ORIGINAL", format_bytes(file_size))
+            display_metric_card(col2, "COMPRESSED", format_bytes(compressed_size))
+            display_metric_card(col3, "REDUCTION", f"{compression_ratio:.2f}%", delta="Smaller ✓")
+            display_metric_card(col4, "SPACE SAVED", format_bytes(space_saved))
+            display_metric_card(col5, "TIME TAKEN", f"{compression_time:.3f}s")
             
             st.divider()
             
             # ========== TABS ========== #
             tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-                "Huffman Tree", 
-                "LZ77 Tokens", 
-                "Statistics", 
-                "Binary Preview",
-                "Comparison",
-                "Download"
+                "🌳 Huffman Tree", 
+                "🔗 LZ77 Tokens", 
+                "📊 Statistics", 
+                "💾 Binary Preview",
+                "📉 Comparison",
+                "⬇️ Download"
             ])
             
             # TAB 1: HUFFMAN TREE
             with tab1:
-                st.write("### Huffman Encoding Tree")
-                st.write("Nodes: Character or Frequency | Edges: Bit Code (0/1)")
+                st.write("### Huffman Encoding Tree Visualization")
+                st.write("**Nodes:** Character or Frequency | **Edges:** Bit Codes (0/1)")
                 fig = draw_huffman_tree_enhanced(root)
-                st.pyplot(fig)
+                st.pyplot(fig, use_container_width=True)
             
             # TAB 2: LZ77 TOKENS
             with tab2:
@@ -337,87 +538,99 @@ if mode == "Compress":
                     else:
                         formatted_tokens.append(f"M:{t[1]},{t[2]}")
                 
-                # Display in columns
-                cols = st.columns(4)
-                for idx, token in enumerate(formatted_tokens[:20]):  # Show first 20
-                    cols[idx % 4].write(f"`{token}`")
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("Total Tokens", len(tokens))
+                with col2:
+                    st.metric("Unique Tokens", len(set(formatted_tokens)))
                 
-                if len(formatted_tokens) > 20:
-                    st.info(f"... and {len(formatted_tokens) - 20} more tokens")
+                # Display tokens in a grid
+                st.write("**Token Preview:**")
+                cols = st.columns(5)
+                for idx, token in enumerate(formatted_tokens[:25]):
+                    cols[idx % 5].markdown(f"`{token}`")
                 
-                st.metric("Total Tokens", len(tokens))
+                if len(formatted_tokens) > 25:
+                    st.info(f"... and {len(formatted_tokens) - 25} more tokens")
             
             # TAB 3: STATISTICS
             with tab3:
-                st.write("### Detailed Statistics")
+                st.write("### Detailed Compression Statistics")
                 
                 col1, col2 = st.columns(2)
                 
                 with col1:
-                    st.write("**Input Analysis**")
-                    st.write(f"- Size: {format_bytes(file_size)}")
-                    st.write(f"- Bits: {file_size * 8:,}")
-                    st.write(f"- Characters: {len(file_content):,}")
+                    st.markdown("**📥 Input Analysis**")
+                    st.write(f"- File Size: **{format_bytes(file_size)}**")
+                    st.write(f"- Bits: **{file_size * 8:,}**")
+                    st.write(f"- Characters: **{len(file_content):,}**")
+                    st.write(f"- Entropy Estimate: **{min(8, 8 * (1 - compression_ratio/100)):.2f} bits/byte**")
                 
                 with col2:
-                    st.write("**Output Analysis**")
-                    st.write(f"- Size: {format_bytes(compressed_size)}")
-                    st.write(f"- Bits: {compressed_size * 8:,}")
-                    st.write(f"- Reduction: {compression_ratio:.2f}%")
+                    st.markdown("**📤 Output Analysis**")
+                    st.write(f"- Compressed Size: **{format_bytes(compressed_size)}**")
+                    st.write(f"- Bits: **{compressed_size * 8:,}**")
+                    st.write(f"- Reduction: **{compression_ratio:.2f}%**")
+                    st.write(f"- Effective Rate: **{(compressed_size * 8 / len(file_content)):.2f} bits/byte**")
                 
                 st.write("---")
-                st.write("**Token Statistics**")
-                unique_tokens = len(set(formatted_tokens))
-                st.write(f"- Generated: {len(tokens)}")
-                st.write(f"- Unique: {unique_tokens}")
-                st.write(f"- Per Character: {len(tokens)/len(file_content):.3f}")
+                st.write("**🔗 Token Statistics**")
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Generated", len(tokens))
+                with col2:
+                    st.metric("Unique", len(set(formatted_tokens)))
+                with col3:
+                    st.metric("Per Char", f"{len(tokens)/len(file_content):.3f}")
             
             # TAB 4: BINARY PREVIEW
             with tab4:
                 st.write("### Binary Output Preview")
-                st.write(f"*Showing first 64 bytes of {len(encoded)} bytes*")
-                preview = encoded[:64]
+                st.write(f"*Showing first 128 bytes of {format_bytes(len(encoded))} total*")
+                preview = encoded[:128]
                 formatted_binary = ' '.join(f"{byte:08b}" for byte in preview)
-                st.code(formatted_binary, language='text')
-                st.info(f"Total size: {format_bytes(len(encoded))} ({len(encoded) * 8:,} bits)")
+                
+                with st.expander("View Binary Data", expanded=True):
+                    st.code(formatted_binary, language='text')
+                
+                st.info(f"**Total Size:** {format_bytes(len(encoded))} ({len(encoded) * 8:,} bits)")
             
-            # TAB 5: COMPARISON
+            # TAB 5: COMPARISON CHART
             with tab5:
-                st.write("### Before & After Comparison")
+                st.write("### Visual Comparison")
                 
-                comparison_data = {
-                    "Metric": ["File Size", "Bits", "Compression Time"],
-                    "Original": [format_bytes(file_size), f"{file_size * 8:,}", "-"],
-                    "Compressed": [format_bytes(compressed_size), f"{compressed_size * 8:,}", f"{compression_time:.3f}s"]
-                }
+                fig = create_stat_comparison(file_size, compressed_size)
+                st.pyplot(fig, use_container_width=True)
                 
-                st.table(comparison_data)
-                
-                # Visual comparison
-                chart_data = pd.DataFrame({
-                    "Type": ["Original", "Compressed"],
-                    "Size (Bytes)": [file_size, compressed_size]
+                # Detailed comparison table
+                st.write("**Detailed Metrics:**")
+                comparison_data = pd.DataFrame({
+                    "Metric": ["File Size", "Data Bits", "Compression Ratio", "Time Required"],
+                    "Original": [format_bytes(file_size), f"{file_size * 8:,}", "-", "-"],
+                    "Compressed": [format_bytes(compressed_size), f"{compressed_size * 8:,}", f"{compression_ratio:.2f}%", f"{compression_time:.3f}s"],
+                    "Difference": [f"-{format_bytes(space_saved)}", f"-{space_saved * 8:,}", f"{compression_ratio:.2f}%", "-"]
                 })
-                st.bar_chart(chart_data.set_index("Type"))
+                
+                st.dataframe(comparison_data, use_container_width=True, hide_index=True)
             
             # TAB 6: DOWNLOAD
             with tab6:
-                st.write("### Download Options")
+                st.write("### 📥 Download Compressed Files")
                 
                 col1, col2 = st.columns(2)
                 
                 with col1:
                     st.download_button(
-                        label="📥 Compressed Binary (.bin)",
-                        data=encoded,  # Already bytes
+                        label="📦 Compressed Binary (.bin)",
+                        data=encoded,
                         file_name=f"{st.session_state['original_filename'].split('.')[0]}.bin",
-                        mime="application/octet-stream"
+                        mime="application/octet-stream",
+                        use_container_width=True,
+                        key="download_bin"
                     )
                 
                 with col2:
-                    # Encode codes dict as array: index = byte value, value = code
-                    # This prevents key corruption during download/re-upload
-                    codes_array = [''] * 256  # 256 possible byte values
+                    codes_array = [''] * 256
                     for byte_val, binary_code in st.session_state['codes'].items():
                         codes_array[byte_val] = binary_code
                     
@@ -434,343 +647,459 @@ if mode == "Compress":
                         label="📋 Metadata (JSON)",
                         data=json.dumps(metadata, indent=2),
                         file_name=f"{st.session_state['original_filename'].split('.')[0]}_metadata.json",
-                        mime="application/json"
+                        mime="application/json",
+                        use_container_width=True,
+                        key="download_meta"
                     )
-
+                
+                st.info("💡 **Tip:** Keep both files together to decompress later!")
 # ==================== BATCH COMPRESS MODE ==================== #
-elif mode == "Batch Compress":
-    st.markdown("<div class='main-header'>Batch Compression</div>", unsafe_allow_html=True)
+elif "Batch" in mode:
+    st.markdown("<div class='main-header'>📦 Batch Compression</div>", unsafe_allow_html=True)
     
+    st.write("### 📤 Select Multiple Files")
     uploaded_files = st.file_uploader(
-        "Upload multiple files to compress",
+        "Choose multiple files to compress",
         type=["txt", "json", "py", "csv", "md"],
-        accept_multiple_files=True
+        accept_multiple_files=True,
+        key="batch_uploader"
     )
     
-    if uploaded_files and st.button("▶ Compress All Files", use_container_width=True, type="primary"):
-        ensure_output_dir()
-        progress_bar = st.progress(0)
-        results = []
-        
-        for idx, file in enumerate(uploaded_files):
-            with st.spinner(f"Compressing {file.name}..."):
-                try:
-                    file_content = file.read().decode('utf-8', errors='ignore')
-                    file_size = len(file_content)
+    if uploaded_files:
+        col1, col2, col3 = st.columns([1, 1, 2])
+        with col1:
+            if st.button("▶ Compress All Files", use_container_width=True, type="primary", key="batch_compress_btn"):
+                ensure_output_dir()
+                progress_container = st.container()
+                results = []
+                
+                progress_bar = progress_container.progress(0)
+                status_text = progress_container.empty()
+                
+                for idx, file in enumerate(uploaded_files):
+                    status_text.write(f"⏳ Processing: {file.name}")
                     
-                    start_time = time.time()
-                    compressor = Compressor()
-                    encoded, root, tokens, codes = compressor.compress(file_content)
-                    compression_time = time.time() - start_time
-                    
-                    # encoded is now bytes (properly packed)
-                    compressed_size = len(encoded)
-                    compression_ratio = (1 - compressed_size / file_size) * 100 if file_size > 0 else 0
-                    space_saved = file_size - compressed_size
-                    
-                    # Save compressed file (as binary)
-                    output_path = f"{OUTPUT_DIR}/{file.name.split('.')[0]}.bin"
-                    os.makedirs(OUTPUT_DIR, exist_ok=True)
-                    with open(output_path, 'wb') as f:
-                        f.write(encoded)
-                    
-                    results.append({
-                        "File": file.name,
-                        "Original": format_bytes(file_size),
-                        "Compressed": format_bytes(compressed_size),
-                        "Ratio": f"{compression_ratio:.2f}%",
-                        "Time": f"{compression_time:.3f}s",
-                        "✅": "Done"
-                    })
-                    
-                    # Save to history
-                    history_entry = {
-                        "filename": file.name,
-                        "timestamp": datetime.now().isoformat(),
-                        "original_size": file_size,
-                        "compressed_size": compressed_size,
-                        "compression_ratio": compression_ratio,
-                        "space_saved": space_saved,
-                        "time_taken": compression_time
-                    }
-                    save_history(history_entry)
-                    
-                except Exception as e:
-                    results.append({
-                        "File": file.name,
-                        "Status": f"❌ Error: {str(e)}"
-                    })
-            
-            progress_bar.progress((idx + 1) / len(uploaded_files))
-        
-        st.divider()
-        st.write("### Results")
-        st.table(results)
-        st.success("✅ Batch compression complete!")
+                    try:
+                        file_content = file.read().decode('utf-8', errors='ignore')
+                        file_size = len(file_content)
+                        
+                        start_time = time.time()
+                        compressor = Compressor()
+                        encoded, root, tokens, codes = compressor.compress(file_content)
+                        compression_time = time.time() - start_time
+                        
+                        compressed_size = len(encoded)
+                        compression_ratio = (1 - compressed_size / file_size) * 100 if file_size > 0 else 0
+                        space_saved = file_size - compressed_size
+                        
+                        # Save compressed file
+                        output_path = f"{OUTPUT_DIR}/{file.name.split('.')[0]}.bin"
+                        os.makedirs(OUTPUT_DIR, exist_ok=True)
+                        with open(output_path, 'wb') as f:
+                            f.write(encoded)
+                        
+                        results.append({
+                            "📁 File": file.name,
+                            "📥 Original": format_bytes(file_size),
+                            "📤 Compressed": format_bytes(compressed_size),
+                            "📊 Ratio": f"{compression_ratio:.2f}%",
+                            "⏱️ Time": f"{compression_time:.3f}s",
+                            "✅ Status": "Success"
+                        })
+                        
+                        # Save to history
+                        history_entry = {
+                            "filename": file.name,
+                            "timestamp": datetime.now().isoformat(),
+                            "original_size": file_size,
+                            "compressed_size": compressed_size,
+                            "compression_ratio": compression_ratio,
+                            "space_saved": space_saved,
+                            "time_taken": compression_time
+                        }
+                        save_history(history_entry)
+                        
+                    except Exception as e:
+                        results.append({
+                            "📁 File": file.name,
+                            "✅ Status": f"❌ Error: {str(e)[:30]}"
+                        })
+                
+                    progress = (idx + 1) / len(uploaded_files)
+                    progress_bar.progress(progress)
+                
+                status_text.success("✅ Batch compression complete!")
+                
+                st.divider()
+                st.write("### 📋 Results")
+                st.dataframe(pd.DataFrame(results), use_container_width=True, hide_index=True)
+                
+                # Summary stats
+                col1, col2, col3, col4 = st.columns(4)
+                successful = len([r for r in results if "Success" in str(r.get("✅ Status", ""))])
+                with col1:
+                    st.metric("Total Files", len(uploaded_files))
+                with col2:
+                    st.metric("Successful", successful)
+                with col3:
+                    st.metric("Failed", len(uploaded_files) - successful)
+                with col4:
+                    st.metric("Output Dir", OUTPUT_DIR)
+    else:
+        st.info("👆 Upload files to get started")
+
 
 # ==================== DECOMPRESS MODE ==================== #
-elif mode == "Decompress":
-    st.markdown("<div class='main-header'>File Decompression</div>", unsafe_allow_html=True)
+elif "Decompres" in mode:
+    st.markdown("<div class='main-header'>📂 File Decompression</div>", unsafe_allow_html=True)
     
-    st.write("To decompress a file, you need:")
-    st.write("1. The compressed `.bin` file")
-    st.write("2. The corresponding `_metadata.json` file (contains Huffman codes)")
+    st.info("ℹ️ To decompress a file, you need:")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.markdown("1️⃣ **Compressed `.bin` file**")
+    with col2:
+        st.markdown("2️⃣ **Metadata `.json` file**")
+    with col3:
+        st.markdown("3️⃣ **Both must match**")
+    
+    st.divider()
     
     col1, col2 = st.columns(2)
     with col1:
-        bin_file = st.file_uploader("📦 Upload .bin file", type=["bin"], key="decomp_bin")
+        st.write("### 📦 Compressed Binary")
+        bin_file = st.file_uploader("Upload .bin file", type=["bin"], key="decomp_bin")
     
     with col2:
-        metadata_file = st.file_uploader("📋 Upload metadata.json", type=["json"], key="decomp_meta")
+        st.write("### 📋 Metadata File")
+        metadata_file = st.file_uploader("Upload metadata.json", type=["json"], key="decomp_meta")
     
     if bin_file and metadata_file:
-        try:
-            # Read the compressed binary file
-            compressed_data = bin_file.read()
-            
-            # Read and parse the metadata
-            metadata = json.load(metadata_file)
-            codes_from_json = metadata.get('codes', [])
-            original_filename = metadata.get('filename', 'decompressed.txt')
-            
-            # Validate that codes exist
-            if not codes_from_json:
-                st.error("❌ Metadata does not contain valid Huffman codes!")
-                st.stop()
-            
-            # Decode codes array: convert index to byte value
-            # If it's already a dict (from older format), use it directly
-            if isinstance(codes_from_json, dict):
-                codes_converted = {int(k): v for k, v in codes_from_json.items()}
-            else:
-                # It's an array - convert index to byte value
-                codes_converted = {}
-                try:
-                    for byte_val, binary_code in enumerate(codes_from_json):
-                        if binary_code:  # Only add non-empty codes
-                            codes_converted[byte_val] = binary_code
-                except Exception as e:
-                    st.error(f"❌ Error decoding Huffman codes: {str(e)}")
-                    st.stop()
-            
-            if not codes_converted:
-                st.error("❌ No valid Huffman codes found after conversion!")
-                st.stop()
-            
-            st.divider()
-            st.write("### Decompressing...")
-            
+        col1, col2 = st.columns([1, 3])
+        with col1:
+            if st.button("▶ Decompress", type="primary", use_container_width=True, key="decomp_btn"):
+                st.session_state['decompress_clicked'] = True
+        
+        if st.session_state.get('decompress_clicked', False):
             try:
-                with st.spinner("Decompressing file..."):
+                # Read files
+                compressed_data = bin_file.read()
+                metadata = json.load(metadata_file)
+                
+                with st.spinner("🔄 Decompressing..."):
+                    codes_from_json = metadata.get('codes', [])
+                    original_filename = metadata.get('filename', 'decompressed.txt')
+                    original_size_meta = metadata.get('original_size', 0)
+                    
+                    if not codes_from_json:
+                        st.error("❌ No Huffman codes in metadata!")
+                        st.stop()
+                    
+                    # Decode codes
+                    if isinstance(codes_from_json, dict):
+                        codes_converted = {int(k): v for k, v in codes_from_json.items()}
+                    else:
+                        codes_converted = {}
+                        for byte_val, binary_code in enumerate(codes_from_json):
+                            if binary_code:
+                                codes_converted[byte_val] = binary_code
+                    
+                    if not codes_converted:
+                        st.error("❌ No valid Huffman codes found!")
+                        st.stop()
+                    
                     start_time = time.time()
                     decompressor = Decompressor()
-                    
-                    # Call decompress with codes
                     decompressed_content = decompressor.decompress(compressed_data, codes_converted)
                     decompression_time = time.time() - start_time
                 
-                # Store results
                 st.session_state['decompressed'] = True
                 st.session_state['decompressed_content'] = decompressed_content
                 st.session_state['decompressed_size'] = len(decompressed_content)
                 st.session_state['decompressed_filename'] = original_filename
                 st.session_state['decompression_time'] = decompression_time
+                st.session_state['decompress_clicked'] = False
                 
                 st.success(f"✅ Decompression Complete! ({decompression_time:.3f}s)")
-            except Exception as decompression_error:
-                st.error(f"❌ Decompression failed: {str(decompression_error)}")
-                st.stop()
+            
+            except json.JSONDecodeError:
+                st.error("❌ Invalid JSON metadata file!")
+            except Exception as e:
+                st.error(f"❌ Decompression Error: {str(e)}")
+        
+        st.divider()
+        
+        # Show results
+        if 'decompressed' in st.session_state and st.session_state['decompressed']:
+            decompressed = st.session_state['decompressed_content']
+            
+            st.markdown("### 📈 Decompression Results")
+            col1, col2, col3, col4 = st.columns(4)
+            display_metric_card(col1, "COMPRESSED", format_bytes(len(compressed_data)))
+            display_metric_card(col2, "DECOMPRESSED", format_bytes(len(decompressed)))
+            display_metric_card(col3, "EXPANSION", f"{len(decompressed) / len(compressed_data):.2f}x")
+            display_metric_card(col4, "TIME", f"{st.session_state['decompression_time']:.3f}s")
             
             st.divider()
             
-            # Display decompression results
-            st.subheader("Decompression Results")
-            
-            metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
-            
-            with metric_col1:
-                st.metric("Compressed Size", format_bytes(len(compressed_data)))
-            with metric_col2:
-                st.metric("Decompressed Size", format_bytes(len(decompressed_content)))
-            with metric_col3:
-                st.metric("Expansion Ratio", f"{(len(decompressed_content) / len(compressed_data)):.2f}x")
-            with metric_col4:
-                st.metric("Time Taken", f"{decompression_time:.3f}s")
-            
-            st.divider()
-            
-            # Create tabs for different views
-            tab1, tab2, tab3 = st.tabs(["Preview", "Statistics", "Download"])
+            # Tabs
+            tab1, tab2, tab3 = st.tabs(["👁️ Preview", "📊 Statistics", "⬇️ Download"])
             
             with tab1:
-                st.write("### Decompressed File Preview")
-                preview_text = decompressed_content[:500]
-                if len(decompressed_content) > 500:
-                    st.text_area("Content (First 500 chars):", preview_text, height=200, disabled=True)
-                    st.info(f"... and {len(decompressed_content) - 500} more characters")
-                else:
-                    st.text_area("Full Content:", decompressed_content, height=200, disabled=True)
+                st.write("### File Preview")
+                preview_len = min(1000, len(decompressed))
+                preview_text = decompressed[:preview_len]
+                st.text_area("Content:", preview_text, height=250, disabled=True)
+                if len(decompressed) > preview_len:
+                    st.info(f"📄 Showing {preview_len} of {len(decompressed)} characters")
             
             with tab2:
                 st.write("### Decompression Statistics")
-                
                 col1, col2 = st.columns(2)
-                
                 with col1:
-                    st.write("**Input (Compressed)**")
-                    st.write(f"- Size: {format_bytes(len(compressed_data))}")
-                    st.write(f"- Bytes: {len(compressed_data):,}")
-                
+                    st.markdown("**Input (Compressed)**")
+                    st.write(f"📦 Size: {format_bytes(len(compressed_data))}")
+                    st.write(f"💾 Bytes: {len(compressed_data):,}")
                 with col2:
-                    st.write("**Output (Original)**")
-                    st.write(f"- Size: {format_bytes(len(decompressed_content))}")
-                    st.write(f"- Characters: {len(decompressed_content):,}")
+                    st.markdown("**Output (Original)**")
+                    st.write(f"📄 Size: {format_bytes(len(decompressed))}")
+                    st.write(f"📝 Chars: {len(decompressed):,}")
                 
                 st.write("---")
-                st.write("**Metadata Information**")
-                st.write(f"- Original Filename: {original_filename}")
-                st.write(f"- Huffman Codes: {len(codes_converted)}")
-                st.write(f"- Decompression Time: {decompression_time:.4f} seconds")
+                st.markdown("**🔑 Huffman Information**")
+                st.write(f"✅ Codes Loaded: Yes")
+                st.write(f"⏱️ Decompression Time: {st.session_state['decompression_time']:.4f}s")
             
             with tab3:
                 st.write("### Download Decompressed File")
-                
-                # Download button
                 st.download_button(
-                    label="📥 Download Decompressed File",
-                    data=decompressed_content,
-                    file_name=original_filename,
+                    label="⬇️ Download",
+                    data=decompressed,
+                    file_name=st.session_state['decompressed_filename'],
                     mime="text/plain",
-                    use_container_width=True
+                    use_container_width=True,
+                    key="download_decomp"
                 )
-                
-                st.info(f"File will be saved as: **{original_filename}**")
-        
-        except json.JSONDecodeError:
-            st.error("❌ Invalid metadata file! Please upload a valid JSON file.")
-        except Exception as e:
-            st.error(f"❌ Decompression failed: {str(e)}")
-            st.write("**Troubleshooting:**")
-            st.write("- Ensure you're using the correct `.bin` and `_metadata.json` files together")
-            st.write("- The metadata must contain the Huffman codes from the original compression")
-            st.write("- Check that the files weren't corrupted during transfer")
+                st.success(f"File will be saved as: **{st.session_state['decompressed_filename']}**")
+    
     elif bin_file or metadata_file:
-        st.warning("⚠️ Please upload BOTH the .bin file AND the metadata.json file to decompress")
+        st.warning("⚠️ Please upload BOTH .bin and metadata.json files")
 
 
 # ==================== ANALYTICS MODE ==================== #
-elif mode == "Analytics":
-    st.markdown("<div class='main-header'>Compression Analytics</div>", unsafe_allow_html=True)
+elif "Analytics" in mode:
+    st.markdown("<div class='main-header'>📊 Compression Analytics</div>", unsafe_allow_html=True)
     
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Algorithm", "DEFLATE")
-    with col2:
-        st.metric("Components", "LZ77 + Huffman")
-    with col3:
-        st.metric("Data Loss", "Zero")
+    # Algorithm info cards
+    col1, col2, col3, col4 = st.columns(4)
+    display_metric_card(col1, "ALGORITHM", "DEFLATE")
+    display_metric_card(col2, "COMPONENTS", "LZ77 + Huffman")
+    display_metric_card(col3, "DATA LOSS", "None (Lossless)")
+    display_metric_card(col4, "USE CASES", "ZIP, PNG, HTTP")
     
     st.divider()
     
-    st.write("### How DEFLATE Works")
+    st.markdown("### 🔄 How DEFLATE Works")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        st.write("**Stage 1: LZ77 Dictionary**")
-        st.write("- Finds repeated sequences\n- Replaces with references\n- Creates token stream")
+        st.markdown("""
+        <div class='feature-card'>
+            <div style='font-size: 2rem; margin-bottom: 0.5rem;'>🔗</div>
+            <div style='font-size: 1.2rem; font-weight: 700; color: #e2e8f0; margin-bottom: 1rem;'>Stage 1: LZ77</div>
+            <div style='color: #94a3b8;'>
+            • Finds repeated sequences<br>
+            • Replaces with references<br>
+            • Creates token stream<br>
+            • Typical: 20-30% reduction
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col2:
-        st.write("**Stage 2: Huffman Encoding**")
-        st.write("- Analyzes token frequency\n- Builds binary tree\n- Short codes = frequent tokens")
+        st.markdown("""
+        <div class='feature-card'>
+            <div style='font-size: 2rem; margin-bottom: 0.5rem;'>🌳</div>
+            <div style='font-size: 1.2rem; font-weight: 700; color: #e2e8f0; margin-bottom: 1rem;'>Stage 2: Huffman</div>
+            <div style='color: #94a3b8;'>
+            • Analyzes token frequency<br>
+            • Builds binary tree<br>
+            • Assigns variable-length codes<br>
+            • Typical: Additional 30-40% reduction
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
     
     st.divider()
     
-    st.write("### Expected Ratios")
-    ratio_data = {
-        "File Type": ["Text", "Code", "JSON", "CSV", "Compressed"],
-        "Ratio": ["50-60%", "55-65%", "45-55%", "40-50%", "0-5%"]
-    }
-    st.table(ratio_data)
+    st.markdown("### 📈 Expected Compression Ratios")
+    ratio_data = pd.DataFrame({
+        "📁 File Type": ["Text Files", "Source Code", "JSON/XML", "CSV Data", "Already Compressed"],
+        "📊 Ratio": ["50-60%", "55-65%", "45-55%", "40-50%", "0-5%"],
+        "💡 Best For": ["Books, Logs", "Python, JS", "APIs, Config", "Datasets", "Images, Video"]
+    })
+    st.dataframe(ratio_data, use_container_width=True, hide_index=True)
+    
+    st.divider()
+    
+    st.markdown("### ⚡ Performance Tips")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("""
+        **✅ Good for compression:**
+        - Text files
+        - Source code
+        - Log files
+        - Configuration files
+        - JSON/CSV data
+        """)
+    with col2:
+        st.markdown("""
+        **❌ Not ideal:**
+        - Already compressed
+        - Binary data
+        - Images (PNG, JPG)
+        - Audio/Video
+        - Encrypted data
+        """)
+
 
 # ==================== HISTORY MODE ==================== #
-elif mode == "History":
-    st.markdown("<div class='main-header'>Compression History</div>", unsafe_allow_html=True)
+elif "History" in mode:
+    st.markdown("<div class='main-header'>📜 Compression History</div>", unsafe_allow_html=True)
     
     history = load_history()
     
     if history:
-        # Export button
-        if st.button("📊 Export as CSV"):
-            df = pd.DataFrame(history)
+        st.divider()
+        
+        # Overview statistics
+        df = pd.DataFrame(history)
+        
+        col1, col2, col3, col4 = st.columns(4)
+        display_metric_card(col1, "TOTAL FILES", str(len(history)))
+        display_metric_card(col2, "AVG RATIO", f"{df['compression_ratio'].mean():.2f}%")
+        display_metric_card(col3, "TOTAL SAVED", format_bytes(df['space_saved'].sum()))
+        display_metric_card(col4, "TOTAL TIME", f"{df['time_taken'].sum():.2f}s")
+        
+        st.divider()
+        
+        # Export option
+        if st.button("📥 Export as CSV", use_container_width=True, key="export_csv"):
             csv = df.to_csv(index=False)
             st.download_button(
                 label="Download CSV",
                 data=csv,
                 file_name="compression_history.csv",
-                mime="text/csv"
+                mime="text/csv",
+                use_container_width=True
             )
         
         st.divider()
         
-        # Display statistics
-        df = pd.DataFrame(history)
-        
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Total Files", len(history))
-        with col2:
-            st.metric("Avg Ratio", f"{df['compression_ratio'].mean():.2f}%")
-        with col3:
-            st.metric("Total Saved", format_bytes(df['space_saved'].sum()))
-        with col4:
-            st.metric("Total Time", f"{df['time_taken'].sum():.2f}s")
-        
-        st.divider()
-        
         # Charts
+        st.markdown("### 📊 Analytics")
+        
         col1, col2 = st.columns(2)
         
         with col1:
             st.write("### Compression Ratios Over Time")
-            st.line_chart(df['compression_ratio'])
+            chart_df = pd.DataFrame({
+                'Index': range(len(df)),
+                'Ratio': df['compression_ratio'].values
+            })
+            st.line_chart(chart_df.set_index('Index')['Ratio'], use_container_width=True)
         
         with col2:
             st.write("### Space Saved by File")
             chart_df = df[['filename', 'space_saved']].head(10)
-            st.bar_chart(chart_df.set_index('filename')['space_saved'])
+            st.bar_chart(chart_df.set_index('filename')['space_saved'], use_container_width=True)
         
         st.divider()
         
         # Detailed history table
-        st.write("### Recent Compressions")
-        display_df = df[['filename', 'compression_ratio', 'space_saved', 'timestamp']].head(10)
-        st.dataframe(display_df, use_container_width=True)
+        st.write("### 📋 Recent Compressions")
+        display_df = df[['filename', 'compression_ratio', 'space_saved', 'original_size', 'compressed_size']].copy()
+        display_df['compression_ratio'] = display_df['compression_ratio'].apply(lambda x: f"{x:.2f}%")
+        display_df['space_saved'] = display_df['space_saved'].apply(format_bytes)
+        display_df['original_size'] = display_df['original_size'].apply(format_bytes)
+        display_df['compressed_size'] = display_df['compressed_size'].apply(format_bytes)
+        display_df.columns = ['📁 File', '📊 Ratio', '💾 Saved', '📥 Original', '📤 Compressed']
+        
+        st.dataframe(display_df, use_container_width=True, hide_index=True)
     
     else:
         st.info("📭 No compression history yet. Start compressing to see it here!")
 
+
 # ==================== SETTINGS MODE ==================== #
-elif mode == "Settings":
-    st.markdown("<div class='main-header'>Settings</div>", unsafe_allow_html=True)
+elif "Settings" in mode:
+    st.markdown("<div class='main-header'>⚙️ Settings</div>", unsafe_allow_html=True)
     
-    st.write("### 📁 Files & Storage")
-    if st.button("🗑️ Clear History", key="clear_history_btn", use_container_width=True):
-        if os.path.exists(HISTORY_FILE):
-            os.remove(HISTORY_FILE)
-        st.success("History cleared!")
-        st.rerun()
+    # System info
+    st.markdown("### 🖥️ System Information")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.write(f"📊 Total Compressions: **{len(load_history())}**")
+        st.write(f"💾 History File: **{HISTORY_FILE}**")
+    with col2:
+        st.write(f"📁 Output Directory: **{OUTPUT_DIR}**")
+        st.write(f"⏰ Current Time: **{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}**")
     
     st.divider()
     
-    st.write("### About DEFLATE")
-    st.write("""
-    **DEFLATE** is a lossless data compression algorithm combining:
-    - **LZ77** dictionary encoding (finds patterns)
-    - **Huffman** statistical encoding (assigns codes)
+    # History management
+    st.markdown("### 📁 History Management")
+    col1, col2, col3 = st.columns(3)
     
-    Used in ZIP, PNG, HTTP compression and more.
+    with col1:
+        if st.button("🗑️ Clear All History", use_container_width=True, key="clear_history_btn"):
+            if os.path.exists(HISTORY_FILE):
+                os.remove(HISTORY_FILE)
+            st.success("✅ History cleared!")
+            st.rerun()
+    
+    with col2:
+        if st.button("📂 Open Output Folder", use_container_width=True, key="open_output"):
+            st.info(f"Output folder: {os.path.abspath(OUTPUT_DIR)}")
+    
+    with col3:
+        if os.path.exists(OUTPUT_DIR):
+            files = os.listdir(OUTPUT_DIR)
+            st.metric("Compressed Files", len(files))
+    
+    st.divider()
+    
+    # About section
+    st.markdown("### 📖 About DEFLATE")
+    st.markdown("""
+    **DEFLATE** is a lossless data compression algorithm that combines two powerful techniques:
+    
+    **🔗 LZ77 Dictionary Encoding**
+    - Finds repeated patterns in data
+    - Replaces duplicates with positional references
+    - Typically achieves 20-30% reduction
+    
+    **🌳 Huffman Statistical Encoding**
+    - Analyzes frequency of tokens
+    - Builds a binary tree structure
+    - Assigns shorter codes to frequent items
+    - Provides additional 30-40% reduction
+    
+    **Real-world Usage:**
+    - ZIP archives
+    - PNG images
+    - HTTP compression (DEFLATE)
+    - gz compression
     """)
     
-    st.write("### Project Info")
-    st.write(f"- Mode: Unified Streamlit App\n- Version: Pro\n- Storage: {HISTORY_FILE}")
+    st.divider()
+    
+    st.markdown("### 📊 Version & Credits")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("App Version", "Pro 2.0")
+    with col2:
+        st.metric("Algorithm", "LZ77 + Huffman")
+    with col3:
+        st.metric("Platform", "Streamlit")

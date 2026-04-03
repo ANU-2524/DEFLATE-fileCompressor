@@ -7,5 +7,14 @@
     "compression_ratio": 37.83035489554493,
     "space_saved": 1503,
     "time_taken": 0.007203102111816406
+  },
+  {
+    "filename": "smallfile.csv",
+    "timestamp": "2026-04-02T16:28:34.443326",
+    "original_size": 740124,
+    "compressed_size": 307403,
+    "compression_ratio": 58.46601380309245,
+    "space_saved": 432721,
+    "time_taken": 1.739410400390625
   }
 ]
