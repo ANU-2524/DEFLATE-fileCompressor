@@ -112,8 +112,7 @@ streamlit run app.py        # Web UI
 - Information theory, bit manipulation
 - Modular architecture, clean code
 
-**Interview Pitch:**
-> "Implemented DEFLATE combining LZ77 dictionary encoding with Huffman entropy coding. Achieves 40-60% compression maintaining O(n) decompression with clean modular design."
+> "Implemented DEFLATE combining LZ77 dictionary encoding with Huffman entropy coding. Achieves 40-60% compression maintaining O(n) decompression with clean modular design. Working efficiently with large data."
 
 ---
 
@@ -124,6 +123,7 @@ streamlit run app.py        # Web UI
 - Multi-threading support
 - Binary file compression
 - Performance benchmarks
+- Currently working in reverse order with small size data
 
 ---
 
