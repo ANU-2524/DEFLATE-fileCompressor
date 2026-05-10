@@ -4,7 +4,7 @@
 
 ---
 
-## What?
+## What...?
 
 DEFLATE combines dictionary encoding (LZ77) with statistical encoding (Huffman) to compress files with zero data loss. Used in ZIP, PNG, HTTP compression standards.
 
