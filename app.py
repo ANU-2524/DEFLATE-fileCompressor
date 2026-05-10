@@ -945,9 +945,9 @@ elif mode == "Decompress":
             
             st.write("### Results")
             col1, col2, col3, col4 = st.columns(4)
-            display_metric_card(col1, "COMPRESSED", format_bytes(len(compressed_data)))
+            display_metric_card(col1, "COMPRESSED", format_bytes(bin_file.size))
             display_metric_card(col2, "DECOMPRESSED", format_bytes(len(decompressed)))
-            display_metric_card(col3, "EXPANSION", f"{len(decompressed) / len(compressed_data):.2f}x")
+            display_metric_card(col3, "EXPANSION", f"{len(decompressed) / bin_file.size:.2f}x")
             display_metric_card(col4, "TIME", f"{st.session_state['decompression_time']:.3f}s")
             
             st.divider()
@@ -964,8 +964,8 @@ elif mode == "Decompress":
                 col1, col2 = st.columns(2)
                 with col1:
                     st.write("**Input**")
-                    st.write(f"Size: {format_bytes(len(compressed_data))}")
-                    st.write(f"Bytes: {len(compressed_data):,}")
+                    st.write(f"Size: {format_bytes(bin_file.size)}")
+                    st.write(f"Bytes: {bin_file.size:,}")
                 with col2:
                     st.write("**Output**")
                     st.write(f"Size: {format_bytes(len(decompressed))}")

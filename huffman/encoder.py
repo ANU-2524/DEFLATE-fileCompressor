@@ -53,18 +53,21 @@ class HuffmanEncoder:
         generate(root, "")
         return codes
 
-    def encode(self, text):
+    def encode(self, data):
         """
         Huffman encoding with proper binary packing
-        text: input string
+        data: input string or bytes
         Returns: (binary_data, root, codes where keys are integers 0-255)
         """
-        # Step 1: Build tree from byte values
-        if not text:
+        if not data:
             return b"", None, {}
         
-        # Convert string to byte values
-        data_bytes = [ord(c) for c in text]
+        # Step 1: Build tree from byte values
+        # Convert to list of integers (0-255)
+        if isinstance(data, str):
+            data_bytes = [ord(c) for c in data]
+        else:
+            data_bytes = list(data)
         
         root = self.build_tree(data_bytes)
         if not root:
@@ -76,7 +79,7 @@ class HuffmanEncoder:
         print(f"[DEBUG] Huffman encoder - codes created with integer keys: {len(codes)} unique")
         print(f"[DEBUG] Sample codes: {list(codes.items())[:3]}")
 
-        # Step 3: Encode text to binary string using integer keys
+        # Step 3: Encode to binary string using integer keys
         binary_string = ''.join(codes[byte_val] for byte_val in data_bytes)
 
         # Step 4: Pack binary string into actual bytes

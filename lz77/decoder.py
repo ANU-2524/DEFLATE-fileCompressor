@@ -12,10 +12,14 @@ class LZ77Decoder:
             if token[0] == 'L':
                 # Literal
                 output.append(token[1])
-            else:
+            elif token[0] == 'M':
                 # Match (distance, length)
                 _, distance, length = token
                 
+                if distance <= 0:
+                    print(f"[ERROR] Invalid distance {distance}")
+                    raise ValueError(f"Invalid distance: {distance} must be > 0")
+
                 if distance > len(output):
                     print(f"[ERROR] Invalid distance {distance}, output size: {len(output)}")
                     raise ValueError(f"Invalid distance: {distance} > {len(output)}")
@@ -23,10 +27,11 @@ class LZ77Decoder:
                 start = len(output) - distance
 
                 for i in range(length):
-                    if start + i >= len(output):
-                        print(f"[ERROR] Invalid index: start={start}, i={i}, output_size={len(output)}")
-                        raise IndexError(f"Invalid index in match token")
-                    output.append(output[start + i])
+                    # In LZ77, length can be greater than distance (repeating pattern)
+                    # We use modulo or simply access the growing output list
+                    output.append(output[start + (i % distance)])
+            else:
+                print(f"[WARNING] Unknown token type: {token[0]}")
         
         result = ''.join(output)
         print(f"[DEBUG] LZ77 Decoder complete. Output size: {len(result)}")

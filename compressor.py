@@ -24,9 +24,8 @@ class Compressor:
         token_bytes = self.token_encoder.encode_tokens(tokens)
 
         # Step 3: Huffman Encoding on token bytes
-        # Convert bytes to string for Huffman encoding
-        token_string = ''.join(chr(b) for b in token_bytes)
-        encoded_data, root, codes = self.huffman.encode(token_string)
+        # Directly encode bytes for better efficiency
+        encoded_data, root, codes = self.huffman.encode(token_bytes)
 
         # Return: encoded_binary, huffman_tree, original_tokens (for visualization), huffman_codes
         return encoded_data, root, tokens, codes
