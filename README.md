@@ -212,9 +212,4 @@ python train_neural_codec.py --audio-dir ./audio_data --epochs 100
 ---
 
 
-
----
-
-## License
-
-MIT — Free to use and modify
+~ Anu Soni ...
