@@ -1,6 +1,6 @@
 # DEFLATE File Compressor
 
-> LZ77 + Huffman Coding = Professional-grade lossless compression. 40-60% reduction on text files.
+> LZ77 + Huffman Coding = Professional-grade lossless compression. 40-60% reduction on text files...
 
 ---
 
